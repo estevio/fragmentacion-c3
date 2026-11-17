@@ -133,7 +133,8 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
 
 def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
     """
-    Fragmenta el paquete ip_packet si su tamaño excede el Maximum Transfer Unit
+    Fragmenta el paquete ip_packet si su tamaño excede el Maximum Transfer Unit.
+    MTU debe ser al menos 19
 
     Args:
         ip_packet (PaqueteIP): la información del paquete
@@ -142,12 +143,14 @@ def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
     Returns:
         list[PaqueteIP]: lista de fragmentos en PaqueteIPs
     """
+    if mtu < 19:
+        print("MTU demasiado pequeño")
+        return
 
     if ip_packet.size + 18 > mtu:
         max_msg_len = mtu - 18
         n_frags = ceil(ip_packet.size / max_msg_len)
         msgs = [ip_packet.msg[i*max_msg_len:(i+1)*max_msg_len] for i in range(n_frags)]
-
         offset = ip_packet.offset
         frags: list[PaqueteIP] = []
         for m in msgs:
@@ -155,12 +158,39 @@ def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
                           offset, 1, m)
             frags.append(d)
             offset += max_msg_len
+        
         if ip_packet.flag == 0:
             frags[-1].flag = 0
         return frags
     else:
         return [ip_packet]
+
+
+def reassemble_ip_packet(fragment_list: list[PaqueteIP]):
+
+    if len(fragment_list) == 1:
+        item: PaqueteIP = fragment_list[0]
+        if item.offset != 0 or item.flag == 1:
+            return None
+        else:
+            return item
+    # ordenar los fragmentos segun offset
+    fragment_list.sort(key=lambda x: x.offset)
+
+    if fragment_list[0].offset != 0:
+        return None
+    if fragment_list[-1].flag == 1:
+        return None
+
+    full_msg = ""
+    for i in range(len(fragment_list) - 1):
+        if fragment_list[i].offset + fragment_list[i].size != fragment_list[i+1].offset:
+            return None
+        full_msg += fragment_list[i].msg
+    full_msg += fragment_list[-1].msg
     
+    item: PaqueteIP = fragment_list[0]
+    return PaqueteIP(item.ip, item.puerto, item.ttl, item.id_pack, 0, 0, full_msg)
 
 if __name__ == "__main__":
 
@@ -173,6 +203,7 @@ if __name__ == "__main__":
     buff_size = 1000
     #global cola_ips
     cola_ips = []
+    fragmentos = {}
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -190,7 +221,15 @@ if __name__ == "__main__":
                 continue
             # el paquete es para mi?
             if data.ip == ip and data.puerto == puerto:
-                print(data.msg)
+                aux_frags = fragmentos.get(data.id_pack, [])
+                if not aux_frags:
+                    aux_frags = []
+                aux_frags.append(data)
+                reassembled = reassemble_ip_packet(aux_frags)
+                if reassembled:
+                    print(reassembled.msg)
+                else:
+                    fragmentos[data.id_pack] = aux_frags
             else:
                 next_addr, mtu = check_routes(rutas, (data.ip, data.puerto))
                 if next_addr:
