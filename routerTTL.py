@@ -1,5 +1,6 @@
 import sys
 import socket
+from math import ceil
 
 class PaqueteIP():
 
@@ -14,7 +15,7 @@ class PaqueteIP():
         self.msg = msg
 
         if size == -1:
-            self.size = len(msg.encode())
+            self.size = len(msg)
         else:
             self.size = size
 
@@ -130,6 +131,36 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
         if visitadas:
             return visitadas.pop(0)
 
+def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
+    """
+    Fragmenta el paquete ip_packet si su tamaño excede el Maximum Transfer Unit
+
+    Args:
+        ip_packet (PaqueteIP): la información del paquete
+        mtu (int): Maximum Transfer Unit
+
+    Returns:
+        list[PaqueteIP]: lista de fragmentos en PaqueteIPs
+    """
+
+    if ip_packet.size + 18 > mtu:
+        max_msg_len = mtu - 18
+        n_frags = ceil(ip_packet.size / max_msg_len)
+        msgs = [ip_packet.msg[i:i+max_msg_len] for i in range(n_frags)]
+
+        offset = ip_packet.offset
+        frags: list[PaqueteIP] = []
+        for m in msgs:
+            d = PaqueteIP(ip_packet.ip, ip_packet.puerto, ip_packet.ttl, ip_packet.id_pack,
+                          offset, 1, m)
+            frags.append(d)
+            offset += max_msg_len
+        if ip_packet.flag == 0:
+            frags[-1].flag = 0
+        return frags
+    else:
+        return [ip_packet]
+    
 
 if __name__ == "__main__":
 
