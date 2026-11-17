@@ -111,10 +111,10 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
                 return
 
             if (ip_destino == destination_address[0] and int(i) <= destination_address[1] <= int(j)):
-                ips_posibles.append(((ip_salto, int(puerto_salto)), mtu))
+                ips_posibles.append(((ip_salto, int(puerto_salto)), int(mtu)))
                 #print(f"puerto salto: {puerto_salto}\tpuerto destino: {destination_address[1]}\n")
                 if ip_salto == destination_address[0] and puerto_salto == destination_address[1]:
-                    return ((ip_salto, puerto_salto), mtu)
+                    return ((ip_salto, puerto_salto), int(mtu))
             
             row = tabla.readline()
 
@@ -146,7 +146,7 @@ def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
     if ip_packet.size + 18 > mtu:
         max_msg_len = mtu - 18
         n_frags = ceil(ip_packet.size / max_msg_len)
-        msgs = [ip_packet.msg[i:i+max_msg_len] for i in range(n_frags)]
+        msgs = [ip_packet.msg[i*max_msg_len:(i+1)*max_msg_len] for i in range(n_frags)]
 
         offset = ip_packet.offset
         frags: list[PaqueteIP] = []
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     ip = sys.argv[1]
     puerto = int(sys.argv[2])
     rutas = sys.argv[3]
-    buff_size = 128
+    buff_size = 1000
     #global cola_ips
     cola_ips = []
 
@@ -202,7 +202,9 @@ if __name__ == "__main__":
                         cola_ips.remove(next_addr)
                     cola_ips.append(next_addr)
                     data.ttl -= 1
-                    sock.sendto(create_packet(data), next_addr)
+                    frags = fragment_ip_packet(data, mtu)
+                    for f in frags:
+                        sock.sendto(create_packet(f), next_addr)
                 else:
                     print(f"No hay rutas hacia {ip}:{puerto} para paquete {ip_paquete}")
 
