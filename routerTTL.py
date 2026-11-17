@@ -201,7 +201,6 @@ if __name__ == "__main__":
     puerto = int(sys.argv[2])
     rutas = sys.argv[3]
     buff_size = 1000
-    #global cola_ips
     cola_ips = []
     fragmentos = {}
 
@@ -221,15 +220,13 @@ if __name__ == "__main__":
                 continue
             # el paquete es para mi?
             if data.ip == ip and data.puerto == puerto:
-                aux_frags = fragmentos.get(data.id_pack, [])
-                if not aux_frags:
-                    aux_frags = []
-                aux_frags.append(data)
-                reassembled = reassemble_ip_packet(aux_frags)
+                if data.id_pack not in fragmentos.keys():
+                    fragmentos[data.id_pack] = []
+                fragmentos[data.id_pack].append(data)
+                reassembled = reassemble_ip_packet(fragmentos[data.id_pack])
                 if reassembled:
                     print(reassembled.msg)
-                else:
-                    fragmentos[data.id_pack] = aux_frags
+                    fragmentos.pop(data.id_pack)
             else:
                 next_addr, mtu = check_routes(rutas, (data.ip, data.puerto))
                 if next_addr:
