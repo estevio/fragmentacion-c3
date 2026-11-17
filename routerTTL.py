@@ -102,7 +102,7 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
         while row:
 
             try:
-                ip_destino, i, j, ip_salto, puerto_salto = row.split(" ")
+                ip_destino, i, j, ip_salto, puerto_salto, mtu = row.split(" ")
                 puerto_salto = int(puerto_salto)
                 ip_destino = ip_destino.split("/")[0]
             except:
@@ -110,10 +110,10 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
                 return
 
             if (ip_destino == destination_address[0] and int(i) <= destination_address[1] <= int(j)):
-                ips_posibles.append((ip_salto, int(puerto_salto)))
+                ips_posibles.append(((ip_salto, int(puerto_salto)), mtu))
                 #print(f"puerto salto: {puerto_salto}\tpuerto destino: {destination_address[1]}\n")
                 if ip_salto == destination_address[0] and puerto_salto == destination_address[1]:
-                    return (ip_salto, puerto_salto)
+                    return ((ip_salto, puerto_salto), mtu)
             
             row = tabla.readline()
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     ip = sys.argv[1]
     puerto = int(sys.argv[2])
     rutas = sys.argv[3]
-    buff_size = 32
+    buff_size = 128
     #global cola_ips
     cola_ips = []
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
             if data.ip == ip and data.puerto == puerto:
                 print(data.msg)
             else:
-                next_addr = check_routes(rutas, (data.ip, data.puerto))
+                next_addr, mtu = check_routes(rutas, (data.ip, data.puerto))
                 if next_addr:
                     # print(f"redirigiendo paquete {ip_paquete} con destino final {data.ip}:{data.puerto} " +
                     #       f"desde {ip}:{puerto} hacia {next_addr[0]}:{next_addr[1]}")
