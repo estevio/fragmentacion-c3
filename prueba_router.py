@@ -1,8 +1,8 @@
 import sys
 import socket
-from random import shuffle
+from random import randint
 
-from routerTTL import PaqueteIP, create_packet, fragment_ip_packet
+from routerTTL import PaqueteIP, create_packet
 
 if len(sys.argv) != 4:
     sys.exit("Modo de uso: prueba_router.py [IP_destino];[Puerto_destino];[TTL] " +
@@ -19,6 +19,7 @@ with open(archivo) as txt:
     line = txt.readline()
     while line:
 
-        pack = create_packet(PaqueteIP(headers[0], int(headers[1]), int(headers[2]), 2, 0, 0, line))
+        id = randint(0, 255)
+        pack = create_packet(PaqueteIP(headers[0], int(headers[1]), int(headers[2]), id, 0, 0, line))
         sock.sendto(pack, (ip_inicial, int(puerto_inicial)))
         line = txt.readline()

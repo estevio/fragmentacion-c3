@@ -105,31 +105,35 @@ def check_routes(routes_file_name: str, destination_address: tuple[str, int]):
             try:
                 ip_destino, i, j, ip_salto, puerto_salto, mtu = row.split(" ")
                 puerto_salto = int(puerto_salto)
+                mtu = int(mtu)
                 ip_destino = ip_destino.split("/")[0]
             except:
                 print("error al leer linea")
                 return
 
             if (ip_destino == destination_address[0] and int(i) <= destination_address[1] <= int(j)):
-                ips_posibles.append(((ip_salto, int(puerto_salto)), int(mtu)))
+                ips_posibles.append(((ip_salto, int(puerto_salto)), mtu))
                 #print(f"puerto salto: {puerto_salto}\tpuerto destino: {destination_address[1]}\n")
                 # if ip_salto == destination_address[0] and puerto_salto == destination_address[1]:
-                #     return ((ip_salto, puerto_salto), int(mtu))
+                #     return ((ip_salto, puerto_salto), mtu)
             
             row = tabla.readline()
 
         if not ips_posibles:
             return None
-
         # ips posibles que no estan dentro de cola ips
         # no_visitadas = filter(lambda x: x not in cola_ips, ips_posibles)
+
         no_visitadas = [x for x in ips_posibles if x not in cola_ips]
         if no_visitadas:
+            cola_ips.append(no_visitadas[0])
             return no_visitadas[0]
         # ips posibles que estan en la cola de ips
         visitadas = [x for x in cola_ips if x in ips_posibles]
         if visitadas:
-            return visitadas.pop(0)
+            cola_ips.remove(visitadas[0])
+            cola_ips.append(visitadas[0])
+            return visitadas[0]
 
 def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
     """
@@ -232,11 +236,11 @@ if __name__ == "__main__":
                 if next_addr:
                     # print(f"redirigiendo paquete {ip_paquete} con destino final {data.ip}:{data.puerto} " +
                     #       f"desde {ip}:{puerto} hacia {next_addr[0]}:{next_addr[1]}")
-                    print(f"redirigiendo paquete con destino final {data.puerto} " +
+                    print(f"redirigiendo paquete con mensaje: \"{data.msg}\"\n con destino final {data.puerto} " +
                             f"desde {puerto} hacia {next_addr[1]}")
-                    if next_addr in cola_ips:
-                        cola_ips.remove(next_addr)
-                    cola_ips.append(next_addr)
+                    # if next_addr in cola_ips:
+                    #     cola_ips.remove(next_addr)
+                    # cola_ips.append(next_addr)
                     data.ttl -= 1
                     frags = fragment_ip_packet(data, mtu)
                     for f in frags:
