@@ -171,6 +171,18 @@ def fragment_ip_packet(ip_packet: PaqueteIP, mtu: int):
 
 
 def reassemble_ip_packet(fragment_list: list[PaqueteIP]):
+    """
+    Recibe una lista de fragmentos en PaqueteIP y 
+    si la lista contiene todos los fragmentos del mensaje, se retorna un "rearmado" del paquete original. 
+    Si falta algún fragmento, se retorna `None`.
+
+    Args:
+        fragments_list (list[PaqueteIP]): lista de fragmentos de un mensaje
+
+    Returns:
+        PaqueteIP: el paquete rearmado
+        None: para indicar que el mensaje estaba incompleto
+    """
 
     if len(fragment_list) == 1:
         item: PaqueteIP = fragment_list[0]
