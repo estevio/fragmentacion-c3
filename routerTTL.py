@@ -199,7 +199,7 @@ def reassemble_ip_packet(fragment_list: list[PaqueteIP]):
 if __name__ == "__main__":
 
     if len(sys.argv) != 4:
-        sys.exit("Modo de uso: router.py [router_IP] [router_puerto] [router_rutas].txt")
+        sys.exit("Modo de uso: routerTTL.py [router_IP] [router_puerto] [router_rutas].txt")
 
     ip = sys.argv[1]
     puerto = int(sys.argv[2])
@@ -249,5 +249,6 @@ if __name__ == "__main__":
                     print(f"No hay rutas hacia {ip}:{puerto} para paquete {ip_paquete}")
 
         except KeyboardInterrupt:
+            sock.close()
             sys.exit()
     
